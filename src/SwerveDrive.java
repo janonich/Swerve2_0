@@ -10,6 +10,7 @@ public class SwerveDrive {
 
 	private double width;
 	private double length;
+	private boolean fieldcentric;
 
 	private double FRS, FLS, BLS, BRS;
 	private double FRA, FLA, BLA, BRA;
@@ -23,10 +24,25 @@ public class SwerveDrive {
 	public SwerveDrive(double length, double width) {
 		this.length = length;
 		this.width = width;
+		fieldcentric = false;
 	}
-
+	
+	public SwerveDrive(double length, double width, boolean fieldcentric) {
+		this(length, width);
+		this.fieldcentric = fieldcentric;
+	}
+	
 	public void update(double forward, double strafe, double rot) {
 
+		if (fieldcentric == true){
+			double tempF = forward;
+			double tempS = strafe;
+			
+			forward = tempF * Math.sin(rot) + tempS * Math.cos(rot);
+			strafe = tempF * Math.cos(rot) + tempS * Math.sin(rot);
+			rot = 0;
+		}
+		
 		// intermediates
 		double topX = strafe - length * rot / 2;
 		double bottomX = strafe + length * rot / 2;
@@ -38,11 +54,13 @@ public class SwerveDrive {
 		double ry2 = Math.pow(rightY, 2);
 		double ly2 = Math.pow(leftY, 2);
 
+		// speeds
 		FRS = Math.sqrt(tx2 + ry2);
 		FLS = Math.sqrt(tx2 + ly2);
 		BLS = Math.sqrt(bx2 + ly2);
 		BRS = Math.sqrt(bx2 + ry2);
-
+		
+		//angles
 		FRA = Math.atan2(topX, rightY);
 		FLA = Math.atan2(topX, leftY);
 		BLA = Math.atan2(bottomX, leftY);
