@@ -5,12 +5,13 @@ public class SwerveDrive {
 		SwerveDrive swerve = new SwerveDrive(1, 1);
 		long last = System.currentTimeMillis();
 		for (double f = -1; f <= 1; f += .1) {
-			System.out.println("\n" + f + "\n");
+			System.out.println("\nf = " + f
+					+ ", s in tenths from -1 to 1\n\n\tAngles");
 			for (double s = -1; s <= 1; s += .1) {
 				swerve.update(f, s, 0);
-				System.out.println(swerve.FRA * swerve.RAD_TO_ROT + ","
-						+ swerve.FLA * swerve.RAD_TO_ROT + "," + swerve.BLA
-						* swerve.RAD_TO_ROT + "," + swerve.BRA
+				System.out.println("\t" + swerve.oldFRA * swerve.RAD_TO_ROT
+						+ "," + swerve.FLA * swerve.RAD_TO_ROT + ","
+						+ swerve.BLA * swerve.RAD_TO_ROT + "," + swerve.BRA
 						* swerve.RAD_TO_ROT);
 			}
 		}
@@ -25,9 +26,16 @@ public class SwerveDrive {
 	 * that we need to clean it up and bad. This math class should be the most
 	 * efficient since it takes into account our previous versions and problems.
 	 * 
-	 * When field centric, the rotation is field centric (ie, the rotation stick
-	 * points you in the direction you want the robot to face), as well as the
-	 * velocity. In robocentric, rot refers to the speed of rotation of the robot.
+	 * INPUTS:
+	 * 
+	 * forward: [-1,1]; strafe: [-1,1]; Velocity is (+,+) in the first quadrant;
+	 * 
+	 * rot: [R] rad; heading: [R] rad; Positive is clockwise;
+	 * 
+	 * NOTE: When field centric, the rotation is field centric (ie, the rotation
+	 * stick points you in the direction you want the robot to face), as well as
+	 * the velocity. In robocentric, rot refers to the speed of rotation of the
+	 * robot.
 	 */
 
 	final double RAD_TO_ROT = 1.0 / (2 * Math.PI);
@@ -76,15 +84,6 @@ public class SwerveDrive {
 			BRA = oldBRA;
 		}
 
-		if (fieldcentric == true) {
-			double tempF = forward;
-			double tempS = strafe;
-
-			forward = tempF * Math.sin(rot) + tempS * Math.cos(rot);
-			strafe = tempF * Math.cos(rot) + tempS * Math.sin(rot);
-			rot = 0;
-		}
-
 		// intermediates
 		double topX = strafe - length * rot / 2;
 		double bottomX = strafe + length * rot / 2;
@@ -102,29 +101,88 @@ public class SwerveDrive {
 		BLS = Math.sqrt(bx2 + ly2);
 		BRS = Math.sqrt(bx2 + ry2);
 
-		// angles
-		FRA = Math.atan2(topX, rightY);
-		FLA = Math.atan2(topX, leftY);
-		BLA = Math.atan2(bottomX, leftY);
-		BRA = Math.atan2(bottomX, rightY);
+		// normalize into [-1,1]
+		double max = Math.max(Math.max(Math.abs(FRS), Math.abs(FLS)),
+				Math.max(Math.abs(BLS), Math.abs(BRS)));
+		if (max > 1) {
+			FRS /= max;
+			FLS /= max;
+			BLS /= max;
+			BRS /= max;
+		}
 
-		// shortest path calc
-		FRA %= 180;
-		if (((int) (oldFRA - FRA) / 180) % 2 != 0)
+		// angles, in rotations
+		FRA = Math.atan2(topX, rightY) * RAD_TO_ROT;
+		FLA = Math.atan2(topX, leftY) * RAD_TO_ROT;
+		BLA = Math.atan2(bottomX, leftY) * RAD_TO_ROT;
+		BRA = Math.atan2(bottomX, rightY) * RAD_TO_ROT;
+
+		// make it turn nicely
+		int dir;
+		// fr
+		FRA += (int) (oldFRA - FRA);
+		if (oldFRA > FRA)
+			dir = 1;
+		else
+			dir = -1;
+		while (Math.abs(oldFRA - FRA) < .25) {
+			FRA += dir * .5;
 			FRS *= -1;
-		FLA %= 180;
-		if (((int) (oldFRA - FRA) / 180) % 2 != 0)
-			FRS *= -1;
-		FRA %= 180;
-		if (((int) (oldFRA - FRA) / 180) % 2 != 0)
-			FRS *= -1;
-		FRA %= 180;
-		if (((int) (oldFRA - FRA) / 180) % 2 != 0)
-			FRS *= -1;
+		}
+		// fl
+		FLA += (int) (oldFLA - FLA);
+		if (oldFLA > FLA)
+			dir = 1;
+		else
+			dir = -1;
+		while (Math.abs(oldFLA - FLA) < .25) {
+			FLA += dir * .5;
+			FLS *= -1;
+		}
+		// bl
+		BLA += (int) (oldBLA - BLA);
+		if (oldBLA > BLA)
+			dir = 1;
+		else
+			dir = -1;
+		while (Math.abs(oldBLA - BLA) < .25) {
+			BLA += dir * .5;
+			BLS *= -1;
+		}
+		// br
+		BRA += (int) (oldBRA - BRA);
+		if (oldBRA > BRA)
+			dir = 1;
+		else
+			dir = -1;
+		while (Math.abs(oldBRA - BRA) < .25) {
+			BRA += dir * .5;
+			BRS *= -1;
+		}
+
+		oldFRA = FRA;
+		oldFLA = FLA;
+		oldBLA = BLA;
+		oldBRA = BRA;
 
 	}
 
+	public void update(double forward, double strafe, double rot, double heading) {
+		// field centric heading modifier
+		if (fieldcentric == true) {
+			double tempF = forward;
+			double tempS = strafe;
+
+			forward = tempF * Math.sin(rot) + tempS * Math.cos(rot);
+			strafe = -1 * tempF * Math.cos(rot) + tempS * Math.sin(rot);
+		}
+
+		this.update(forward, strafe, rot);
+	}
+
 	public double output(Out out) {
+		// return is in rotations for angles
+		// return is normed to [-1,1] for speed
 		switch (out) {
 		case oFRS:
 			return FRS;
