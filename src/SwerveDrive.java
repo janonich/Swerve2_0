@@ -4,15 +4,12 @@ public class SwerveDrive {
 	public static void main(String[] args) {
 		SwerveDrive swerve = new SwerveDrive(1, 1);
 		long last = System.currentTimeMillis();
-		for (double f = -1; f <= 1; f += .1) {
-			System.out.println("\nf = " + f
+		for (int f = -10; f <= 10; f += 1) {
+			System.out.println("\nf = " + (double) f / 10.0
 					+ ", s in tenths from -1 to 1\n\n\tAngles");
-			for (double s = -1; s <= 1; s += .1) {
-				swerve.update(f, s, 0);
-				System.out.println("\t" + swerve.oldFRA * swerve.RAD_TO_ROT
-						+ "," + swerve.FLA * swerve.RAD_TO_ROT + ","
-						+ swerve.BLA * swerve.RAD_TO_ROT + "," + swerve.BRA
-						* swerve.RAD_TO_ROT);
+			for (int s = -10; s <= 10; s += 1) {
+				swerve.update((double) f / 10.0, (double) s / 10.0, 0);
+				System.out.println("\t" + swerve.FRA * swerve.RAD_TO_ROT);
 			}
 		}
 		System.out.println("\nRuns in (ms) "
@@ -40,8 +37,7 @@ public class SwerveDrive {
 
 	final double RAD_TO_ROT = 1.0 / (2 * Math.PI);
 
-	private double width;
-	private double length;
+	private double width, length, radius;
 	private boolean fieldcentric;
 
 	public double FRS, FLS, BLS, BRS;
@@ -61,6 +57,8 @@ public class SwerveDrive {
 		oldFLA = 0;
 		oldBLA = 0;
 		oldBRA = 0;
+
+		radius = Math.sqrt(Math.pow(length, 2) + Math.pow(width, 2));
 
 		fieldcentric = false;
 	}
@@ -85,10 +83,10 @@ public class SwerveDrive {
 		}
 
 		// intermediates
-		double topX = strafe - length * rot / 2;
-		double bottomX = strafe + length * rot / 2;
-		double rightY = forward + width * rot / 2;
-		double leftY = forward - width * rot / 2;
+		double topX = strafe - length * rot / radius;
+		double bottomX = strafe + length * rot / radius;
+		double rightY = forward + width * rot / radius;
+		double leftY = forward - width * rot / radius;
 
 		double tx2 = Math.pow(topX, 2);
 		double bx2 = Math.pow(bottomX, 2);
